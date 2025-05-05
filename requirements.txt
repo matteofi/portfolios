@@ -4,3 +4,4 @@ numpy
 cvxpy
 scipy
 django
+dj-database-url
