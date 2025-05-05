@@ -6,3 +6,4 @@ scipy
 django
 dj-database-url
 gunicorn
+plotly
