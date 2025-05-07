@@ -26,7 +26,11 @@ SECRET_KEY = 'django-insecure-r^694wt85()z=3j(_0mr3xnbhfk!t*jb2okez1h&sny-xf)+7m
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'portfolios-gmvw.onrender.com',
+    'localhost',
+    '127.0.0.1',
+]
 
 CSRF_TRUSTED_ORIGINS = ['https://portfolios-gmvw.onrender.com']
 
@@ -121,7 +125,14 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'portfolios2/static'),
+]
 
+# Aggiungi queste impostazioni di sicurezza per Render
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
