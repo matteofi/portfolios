@@ -28,7 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-CSRF_TRUSTED_ORIGINS = ['https://portfolios-gmvw.onrender.com/portfolios/']
+CSRF_TRUSTED_ORIGINS = ['https://portfolios-gmvw.onrender.com']
 
 # Application definition
 
