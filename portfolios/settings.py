@@ -124,10 +124,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'portfolios2/static'),
+    BASE_DIR / "static",  # se lo metti dentro una cartella "static"
 ]
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Aggiungi queste impostazioni di sicurezza per Render
 CSRF_COOKIE_SECURE = True
