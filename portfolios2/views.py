@@ -132,7 +132,17 @@ def portfolio_view(request):
     if request.method == 'POST':
         start_date = request.POST.get('start_date')
         end_date = request.POST.get('end_date')
+
+        try:
+            if datetime.strptime(end_date, '%Y-%m-%d').date() < datetime.strptime(start_date, '%Y-%m-%d').date():
+                context['error'] = 'La data di fine deve essere successiva alla data di inizio.'
+                return render(request, 'portfolios2/portfolios.html', context)
+        except ValueError:
+            context['error'] = 'Le date fornite non sono valide.'
+            return render(request, 'portfolios2/portfolios.html', context)
+    
         tickers_input = request.POST.get('tickers')
+
         short_selling = 'short_selling' in request.POST
 
         risk_free_choice = request.POST.get('risk_free_choice')
@@ -161,6 +171,15 @@ def portfolio_view(request):
         tickers = [t.strip().upper() for t in tickers_input.split(',')]
 
         data = yf.download(tickers, start=start_date, end=end_date)['Close']
+
+        missing_tickers = [t for t in tickers if t not in data.columns]
+        
+        if missing_tickers:
+            error_message = f"I seguenti ticker non sono stati trovati: {', '.join(missing_tickers)}"
+            context['error'] = error_message  # Salva il messaggio di errore nel contesto
+            return render(request, 'portfolios2/portfolios.html', context)  # Rendi il messaggio di errore nel template
+
+
         data.dropna(inplace=True)
         cov_matrix = np.log(data / data.shift(1)).cov() * 252
         expected_returns = np.log(data / data.shift(1)).mean() * 252
@@ -218,3 +237,4 @@ def portfolio_view(request):
         }
 
     return render(request, 'portfolios2/portfolios.html', context)
+    
