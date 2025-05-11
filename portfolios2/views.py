@@ -223,3 +223,4 @@ def portfolio_view(request):
             'tp_variance': round(tp_var, 3),
             'tp_std': round(tp_std*100, 3),
             'tp_sharpe': round(tp_sharpe, 3),
+        }
