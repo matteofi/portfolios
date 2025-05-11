@@ -7,8 +7,112 @@ from scipy.optimize import minimize
 from django.shortcuts import render
 
 
-# Funzioni gmvp, tangency_portfolio, efficient_frontier (NON modificate)
+def gmvp(cov_matrix, short_selling):
+    ones = np.ones(cov_matrix.shape[0])
+    inv_cov = np.linalg.inv(cov_matrix)
 
+    if short_selling:
+        w = inv_cov @ ones / (ones.T @ inv_cov @ ones)
+    else:
+        n = cov_matrix.shape[0]
+        w = cp.Variable(n)
+        objective = cp.Minimize(cp.quad_form(w, cov_matrix))
+        constraints = [
+            cp.sum(w) == 1,
+            w >= 0
+        ]
+        problem = cp.Problem(objective, constraints)
+        problem.solve()
+        w = np.array(w.value)
+
+    return w
+
+def tangency_portfolio(expected_returns, cov_matrix, short_selling=True, risk_free_rate=0.0, penalty=0.05):
+    if isinstance(expected_returns, pd.Series):
+        expected_returns = expected_returns.values
+    expected_returns = np.array(expected_returns)
+    
+    n = len(expected_returns)
+    excess_returns = expected_returns - risk_free_rate
+
+    if short_selling:
+        inv_cov = np.linalg.inv(cov_matrix)
+        w = (inv_cov @ excess_returns) / (np.ones(n) @ inv_cov @ excess_returns)
+    else:
+        def negative_sharpe_penalized(w):
+            port_return = np.dot(w, excess_returns)
+            port_vol = np.sqrt(np.dot(w.T, np.dot(cov_matrix, w)))
+            sharpe = port_return / port_vol if port_vol != 0 else 0
+            penalty_term = penalty * np.sum(w ** 2)  # penalità L2
+            return -sharpe + penalty_term
+
+        # vincolo: somma dei pesi = 1
+        constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
+        # bounds: solo no short selling (0 <= w_i <= 1)
+        bounds = [(0, 1) for _ in range(n)]
+        w0 = np.ones(n) / n  # pesi iniziali uniformi
+
+        result = minimize(
+            negative_sharpe_penalized,
+            w0,
+            method='SLSQP',
+            bounds=bounds,
+            constraints=constraints,
+            options={'ftol': 1e-6}
+        )
+
+        if not result.success:
+            raise ValueError(f"Optimization failed: {result.message}")
+
+        w = result.x
+
+    return w
+
+
+def efficient_frontier(cov_matrix, expected_returns, risk_free_rate=0, num_points=1000):
+    results = []
+    ones = np.ones(len(expected_returns))
+    inv_cov = np.linalg.inv(cov_matrix)
+
+    # Calcolo delle costanti A, B, C, D
+    A = ones.T @ inv_cov @ expected_returns
+    B = expected_returns.T @ inv_cov @ expected_returns
+    C = ones.T @ inv_cov @ ones
+    D = B * C - A ** 2
+
+    # Calcolo rendimento GMVP (portafoglio con rischio minimo)
+    mu_gmvp = A / C
+
+    # Calcolo pesi del portafoglio tangente
+    excess_returns = expected_returns - risk_free_rate
+    weights_tp = inv_cov @ excess_returns
+    weights_tp /= ones.T @ weights_tp
+
+    mu_tp = weights_tp @ expected_returns  # rendimento TP
+
+    # Estendere l'intervallo simmetricamente rispetto al rendimento GMVP
+    max_distance = max(abs(mu_tp - mu_gmvp), abs(expected_returns.min() - mu_gmvp), abs(expected_returns.max() - mu_gmvp))
+
+    # L'intervallo viene centrato attorno al rendimento GMVP, bilanciato in entrambe le direzioni
+    min_ep = mu_gmvp - max_distance
+    max_ep = mu_tp + max_distance
+
+    ep_values = np.linspace(min_ep, max_ep, num_points)
+
+    for ep in ep_values:
+        # Calcolo della varianza del portafoglio (cfr. formula della frontiera efficiente)
+        var_p = (C * ep**2 - 2 * A * ep + B) / D
+        if var_p < 0:
+            continue  # evita numeri complessi (portafoglio non valido)
+        std_dev = np.sqrt(var_p)
+        sharpe_ratio = (ep - risk_free_rate) / std_dev
+        results.append({
+            'rischio': std_dev,
+            'rendimento': ep,
+            'sharpe': sharpe_ratio
+        })
+
+    return results
 
 def portfolio_view(request):
     context = {}
