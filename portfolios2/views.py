@@ -27,18 +27,6 @@ def gmvp(cov_matrix, short_selling):
     return w
 
 def tangency_portfolio(expected_returns, cov_matrix, short_selling=True, risk_free_rate=0.0, penalty=0.05):
-    """
-    Calcola il portafoglio tangente massimizzando lo Sharpe Ratio.
-    
-    Se short_selling è False, impone solo vincolo di somma pesi = 1 e penalità sulla concentrazione.
-    
-    Parametri:
-    - expected_returns: array-like, rendimenti attesi
-    - cov_matrix: matrice di covarianza dei rendimenti
-    - short_selling: bool, consente short selling se True
-    - risk_free_rate: float, tasso privo di rischio
-    - penalty: float, forza della penalità L2 sulla concentrazione
-    """
     if isinstance(expected_returns, pd.Series):
         expected_returns = expected_returns.values
     expected_returns = np.array(expected_returns)
@@ -54,12 +42,10 @@ def tangency_portfolio(expected_returns, cov_matrix, short_selling=True, risk_fr
             port_return = np.dot(w, excess_returns)
             port_vol = np.sqrt(np.dot(w.T, np.dot(cov_matrix, w)))
             sharpe = port_return / port_vol if port_vol != 0 else 0
-            penalty_term = penalty * np.sum(w ** 2)  # penalità L2
+            penalty_term = penalty * np.sum(w ** 2)
             return -sharpe + penalty_term
 
-        # vincolo: somma dei pesi = 1
         constraints = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
-        # bounds: solo no short selling (0 <= w_i <= 1)
         bounds = [(0, 1) for _ in range(n)]
         w0 = np.ones(n) / n  # pesi iniziali uniformi
 
@@ -85,36 +71,30 @@ def efficient_frontier(cov_matrix, expected_returns, risk_free_rate=0, num_point
     ones = np.ones(len(expected_returns))
     inv_cov = np.linalg.inv(cov_matrix)
 
-    # Calcolo delle costanti A, B, C, D
     A = ones.T @ inv_cov @ expected_returns
     B = expected_returns.T @ inv_cov @ expected_returns
     C = ones.T @ inv_cov @ ones
     D = B * C - A ** 2
 
-    # Calcolo rendimento GMVP (portafoglio con rischio minimo)
     mu_gmvp = A / C
 
-    # Calcolo pesi del portafoglio tangente
     excess_returns = expected_returns - risk_free_rate
     weights_tp = inv_cov @ excess_returns
     weights_tp /= ones.T @ weights_tp
 
-    mu_tp = weights_tp @ expected_returns  # rendimento TP
+    mu_tp = weights_tp @ expected_returns
 
-    # Estendere l'intervallo simmetricamente rispetto al rendimento GMVP
     max_distance = max(abs(mu_tp - mu_gmvp), abs(expected_returns.min() - mu_gmvp), abs(expected_returns.max() - mu_gmvp))
 
-    # L'intervallo viene centrato attorno al rendimento GMVP, bilanciato in entrambe le direzioni
     min_ep = mu_gmvp - max_distance
     max_ep = mu_tp + max_distance
 
     ep_values = np.linspace(min_ep, max_ep, num_points)
 
     for ep in ep_values:
-        # Calcolo della varianza del portafoglio (cfr. formula della frontiera efficiente)
         var_p = (C * ep**2 - 2 * A * ep + B) / D
         if var_p < 0:
-            continue  # evita numeri complessi (portafoglio non valido)
+            continue  
         std_dev = np.sqrt(var_p)
         sharpe_ratio = (ep - risk_free_rate) / std_dev
         results.append({
@@ -126,65 +106,61 @@ def efficient_frontier(cov_matrix, expected_returns, risk_free_rate=0, num_point
     return results
 
 
-
-
 def portfolio_view(request):
     context = {}
     if request.method == 'POST':
         start_date = request.POST.get('start_date')
         end_date = request.POST.get('end_date')
 
-        # Controllo date
         try:
-            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
-            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
-
-            if end_date_obj < start_date_obj:
+            if datetime.strptime(end_date, '%Y-%m-%d').date() < datetime.strptime(start_date, '%Y-%m-%d').date():
                 context['error'] = 'Errore: La data di fine deve essere successiva alla data di inizio.'
                 return render(request, 'portfolios2/portfolios.html', context)
-            if start_date_obj < datetime(1960, 1, 1).date():
+            if datetime.strptime(start_date, '%Y-%m-%d').date() < datetime.strptime("1960-01-01", '%Y-%m-%d').date():
                 context['error'] = 'Errore: Data meno recente fissata a 01/01/1960.'
                 return render(request, 'portfolios2/portfolios.html', context)
-        except (ValueError, TypeError):
+        except ValueError:
             context['error'] = 'Errore: Date fornite non valide.'
             return render(request, 'portfolios2/portfolios.html', context)
+    
+        tickers_input = request.POST.get('tickers')
 
-        tickers_input = request.POST.get('tickers', '')
-        tickers = [t.strip().upper() for t in tickers_input.split(',') if t.strip()]
-
-        if len(tickers) < 2:
-            context['error'] = 'Errore: Inserire almeno 2 ticker validi, separati da virgola.'
+        if tickers_input < 2:
+            context['error'] = 'Errore: Inserire almeno 2 ticker validi.'
             return render(request, 'portfolios2/portfolios.html', context)
-
+                
         short_selling = 'short_selling' in request.POST
+
         risk_free_choice = request.POST.get('risk_free_choice')
         custom_risk_free = request.POST.get('custom_risk_free')
 
-        # Gestione tasso risk-free
         if risk_free_choice == '0':
             risk_free_rate = 0.0
         elif risk_free_choice == 'custom':
             try:
                 risk_free_rate = float(custom_risk_free)
             except (ValueError, TypeError):
-                context['error'] = 'Errore: Tasso risk-free personalizzato non valido (inserire valore numerico con punto).'
+                context['error'] = 'Errore: Tasso risk-free personalizzato non valido (inserire valore con punto).'
                 return render(request, 'portfolios2/portfolios.html', context)
         elif risk_free_choice == 'irx':
             try:
-                irx_data = yf.download("^IRX", start=start_date, end=end_date)['Close'].dropna()
-                if irx_data.empty:
-                    raise ValueError
+                irx_data = yf.download("^IRX", start=start_date, end=end_date)['Close']
+                irx_data.dropna(inplace=True)
                 risk_free_rate = irx_data.mean() / 100
+                risk_free_rate = risk_free_rate.values[0]
             except Exception:
                 context['error'] = 'Errore nel recupero del tasso IRX.'
                 return render(request, 'portfolios2/portfolios.html', context)
         else:
             risk_free_rate = 0.0
 
+        tickers = [t.strip().upper() for t in tickers_input.split(',')]
+
         try:
             raw_data = yf.download(tickers, start=start_date, end=end_date)
             if 'Close' not in raw_data:
                 raise ValueError('Dati di chiusura mancanti')
+
             data = raw_data['Close']
 
             if isinstance(data.columns, pd.MultiIndex):
@@ -195,26 +171,20 @@ def portfolio_view(request):
             missing_tickers = [t for t in tickers if t not in found_tickers]
 
             if missing_tickers:
-                context['error'] = f"Errore: I seguenti ticker non sono stati trovati: {', '.join(missing_tickers)}"
-                return render(request, 'portfolios2/portfolios.html', context)
-
-            if data.empty:
-                context['error'] = 'Errore: Nessun dato trovato per i ticker selezionati.'
+                context['error'] = f"Errore: ticker {', '.join(missing_tickers)} non trovato/i."
                 return render(request, 'portfolios2/portfolios.html', context)
 
             data.dropna(inplace=True)
             if data.empty:
-                context['error'] = 'Errore: Dati insufficienti (tutti i valori nulli rimossi).'
+                context['error'] = 'Errore: Dati insufficienti dopo la rimozione dei valori nulli.'
                 return render(request, 'portfolios2/portfolios.html', context)
 
         except Exception:
             context['error'] = 'Errore durante il recupero dei dati di mercato.'
             return render(request, 'portfolios2/portfolios.html', context)
 
-        # Calcoli principali
-        log_returns = np.log(data / data.shift(1)).dropna()
-        cov_matrix = log_returns.cov() * 252
-        expected_returns = log_returns.mean() * 252
+        cov_matrix = np.log(data / data.shift(1)).cov() * 252
+        expected_returns = np.log(data / data.shift(1)).mean() * 252
 
         gmvp_weights = gmvp(cov_matrix, short_selling)
         gmvp_exp = expected_returns @ gmvp_weights
@@ -231,31 +201,25 @@ def portfolio_view(request):
         gmvp_sharpe = gmvp_exp / gmvp_std
         tp_sharpe = (tp_exp - risk_free_rate) / tp_std
 
-        gmvp_cumulative = (1 + (log_returns @ gmvp_weights)).cumprod()
-        tp_cumulative = (1 + (log_returns @ tp_weights)).cumprod()
+        log_returns = np.log(data / data.shift(1)).dropna()
+
+        gmvp_portfolio_returns = log_returns @ gmvp_weights
+        tp_portfolio_returns = log_returns @ tp_weights
+
+        gmvp_cumulative = (1 + gmvp_portfolio_returns).cumprod()
+        tp_cumulative = (1 + tp_portfolio_returns).cumprod()
 
         context = {
             'tickers': tickers,
             'start_date': start_date,
             'end_date': end_date,
-            'gmvp_weights': dict(zip(tickers, gmvp_weights * 100)),
-            'tp_weights': dict(zip(tickers, tp_weights * 100)),
-            'gmvp_return': round(gmvp_exp * 100, 3),
+            'gmvp_weights': dict(zip(tickers, gmvp_weights*100)),
+            'tp_weights': dict(zip(tickers, tp_weights*100)),
+            'gmvp_return': round(gmvp_exp*100, 3),
             'gmvp_variance': round(gmvp_var, 3),
-            'gmvp_std': round(gmvp_std * 100, 3),
+            'gmvp_std': round(gmvp_std*100, 3),
             'gmvp_sharpe': round(gmvp_sharpe, 3),
-            'tp_return': round(tp_exp * 100, 3),
+            'tp_return': round(tp_exp*100, 3),
             'tp_variance': round(tp_var, 3),
-            'tp_std': round(tp_std * 100, 3),
+            'tp_std': round(tp_std*100, 3),
             'tp_sharpe': round(tp_sharpe, 3),
-            'cov_matrix_html': pd.DataFrame(cov_matrix, index=tickers, columns=tickers).round(3).to_html(),
-            'returns_html': pd.DataFrame({'Ritorno atteso (%)': expected_returns * 100}, index=tickers).round(3).to_html(),
-            'frontier_data': frontier_data,
-            'risk_free_rate': round(risk_free_rate * 100, 3),
-            'gmvp_point': {'rischio': gmvp_std, 'rendimento': gmvp_exp},
-            'tp_point': {'rischio': tp_std, 'rendimento': tp_exp},
-            'gmvp_cumulative': gmvp_cumulative.to_json(date_format='iso'),
-            'tp_cumulative': tp_cumulative.to_json(date_format='iso'),
-        }
-
-    return render(request, 'portfolios2/portfolios.html', context)
