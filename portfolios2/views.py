@@ -65,33 +65,27 @@ def portfolio_view(request):
 
         try:
             raw_data = yf.download(tickers, start=start_date, end=end_date)
-            if 'Close' not in raw_data:
-                raise ValueError('Dati di chiusura mancanti')
-            data = raw_data['Close']
-
-            if isinstance(data.columns, pd.MultiIndex):
-                found_tickers = data.columns.levels[1]
-            else:
-                found_tickers = data.columns
-
+            data = raw_data.get('Close')
+        
+            if data is None or data.empty:
+                raise ValueError('Dati di chiusura mancanti o vuoti')
+        
+            found_tickers = data.columns.levels[1] if isinstance(data.columns, pd.MultiIndex) else data.columns
             missing_tickers = [t for t in tickers if t not in found_tickers]
-
-            if missing_tickers:
-                context['error'] = f"Errore: I seguenti ticker non sono stati trovati: {', '.join(missing_tickers)}"
+        
+            if missing_tickers or data.empty:
+                context['error'] = 'Errore in tickers.'
                 return render(request, 'portfolios2/portfolios.html', context)
-
-            if data.empty:
-                context['error'] = 'Errore: Nessun dato trovato per i ticker selezionati.'
-                return render(request, 'portfolios2/portfolios.html', context)
-
+        
             data.dropna(inplace=True)
             if data.empty:
-                context['error'] = 'Errore: Dati insufficienti (tutti i valori nulli rimossi).'
+                context['error'] = 'Errore in tickers.'
                 return render(request, 'portfolios2/portfolios.html', context)
-
+        
         except Exception:
-            context['error'] = 'Errore durante il recupero dei dati di mercato.'
+            context['error'] = 'Errore in tickers.'
             return render(request, 'portfolios2/portfolios.html', context)
+
 
         # Calcoli principali
         log_returns = np.log(data / data.shift(1)).dropna()
