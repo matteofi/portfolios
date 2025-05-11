@@ -136,10 +136,13 @@ def portfolio_view(request):
 
         try:
             if datetime.strptime(end_date, '%Y-%m-%d').date() < datetime.strptime(start_date, '%Y-%m-%d').date():
-                context['error'] = 'La data di fine deve essere successiva alla data di inizio.'
+                context['error'] = 'Errore: La data di fine deve essere successiva alla data di inizio.'
+                return render(request, 'portfolios2/portfolios.html', context)
+            if datetime.strptime(start_date, '%Y-%m-%d').date() < datetime.strptime("1960-01-01", '%Y-%m-%d').date():
+                context['error'] = 'Errore: Data meno recente fissata a 01/01/1960.'
                 return render(request, 'portfolios2/portfolios.html', context)
         except ValueError:
-            context['error'] = 'Le date fornite non sono valide.'
+            context['error'] = 'Errore: Date fornite non valide.'
             return render(request, 'portfolios2/portfolios.html', context)
     
         tickers_input = request.POST.get('tickers')
@@ -155,7 +158,7 @@ def portfolio_view(request):
             try:
                 risk_free_rate = float(custom_risk_free)
             except (ValueError, TypeError):
-                context['error'] = 'Tasso risk-free personalizzato non valido.'
+                context['error'] = 'Errore: Tasso risk-free personalizzato non valido (inserirre valore con punto).'
                 return render(request, 'portfolios2/portfolios.html', context)
         elif risk_free_choice == 'irx':
             try:
@@ -176,7 +179,7 @@ def portfolio_view(request):
         missing_tickers = [t for t in tickers if t not in data.columns]
         
         if missing_tickers:
-            error_message = f"I seguenti ticker non sono stati trovati: {', '.join(missing_tickers)}"
+            error_message = f"Errore: I seguenti ticker non sono stati trovati: {', '.join(missing_tickers)}"
             context['error'] = error_message  # Salva il messaggio di errore nel contesto
             return render(request, 'portfolios2/portfolios.html', context)  # Rendi il messaggio di errore nel template
 
