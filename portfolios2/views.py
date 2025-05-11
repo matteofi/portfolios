@@ -238,6 +238,7 @@ def portfolio_view(request):
             'tp_point': {'rischio': tp_std, 'rendimento': tp_exp},
             'gmvp_cumulative': gmvp_cumulative.to_json(date_format='iso'),
             'tp_cumulative': tp_cumulative.to_json(date_format='iso'),
+            'error': context.get('error'),
         }
 
     return render(request, 'portfolios2/portfolios.html', context)
