@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-r^694wt85()z=3j(_0mr3xnbhfk!t*jb2okez1h&sny-xf)+7m
 DEBUG = False if os.environ.get('PRODUCTION') else True
 
 ALLOWED_HOSTS = [
-    'portfolios-gmvw.onrender.com',
+    'portfolios-20m2.onrender.com',
     'localhost',
     '127.0.0.1',
 ]
