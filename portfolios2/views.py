@@ -157,12 +157,13 @@ def portfolio_view(request):
                 return render(request, 'portfolios2/portfolios.html', context)
         elif risk_free_choice == 'irx':
             try:
-                irx_data = yf.download("^IRX", start=start_date, end=end_date)['Close'].dropna()
-                if bil_data.empty:
-                    raise ValueError
-                risk_free_rate = (irx_data.mean() / 100).iloc[0]
+                bil_data = yf.download("BIL", start=start_date, end=end_date)['Close'].dropna()
+                bil_returns=bil_data.pct_change().dropna()
+                if bil_data.empty:
+                    raise ValueError
+                risk_free_rate = (bil_returns.mean() * 252).iloc[0]
             except Exception:
-                context['error'] = 'Errore nel recupero del tasso IRX.'
+                context['error'] = 'Errore nel recupero del tasso BIL.'
                 return render(request, 'portfolios2/portfolios.html', context)
         else:
             risk_free_rate = 0.0
