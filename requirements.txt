@@ -1,0 +1,10 @@
+yfinance
+pandas
+numpy
+cvxpy
+scipy
+django
+dj-database-url
+gunicorn
+plotly
+whitenoise
