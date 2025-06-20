@@ -161,7 +161,7 @@ def portfolio_view(request):
                 bil_returns=bil_data.pct_change().dropna()
                 if bil_data.empty:
                     raise ValueError
-                risk_free_rate = bil_returns.mean() * 252
+                risk_free_rate = (bil_returns.mean() * 252).iloc[0]
             except Exception:
                 context['error'] = 'Errore nel recupero del tasso IRX.'
                 return render(request, 'portfolios2/portfolios.html', context)
