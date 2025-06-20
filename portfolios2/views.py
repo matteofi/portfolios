@@ -155,7 +155,7 @@ def portfolio_view(request):
             except (ValueError, TypeError):
                 context['error'] = 'Errore: Tasso risk-free personalizzato non valido (inserire valore numerico con punto).'
                 return render(request, 'portfolios2/portfolios.html', context)
-        elif risk_free_choice == 'irx':
+        elif risk_free_choice == 'bil':
             try:
                 bil_data = yf.download("BIL", start=start_date, end=end_date)['Close'].dropna()
                 bil_returns=bil_data.pct_change().dropna()
