@@ -1,9 +1,9 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Portafoglio Efficiente</title>
+    <title>Efficient Portfolio</title>
     <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
@@ -43,39 +43,39 @@
 
 <body>
 
-<h1>Portafoglio Efficiente</h1>
-<h5>Verifica i ticker <a href="https://finance.yahoo.com/" target="_blank">qui</a> prima di procedere</h5>
+<h1>Efficient Portfolio</h1>
+<h5>Verify tickers <a href="https://finance.yahoo.com/" target="_blank">here</a> before proceeding</h5>
 
 <form method="POST">
     {% csrf_token %}
 
-    <label for="tickers">Ticker (es: AAPL, MSFT, GOOGL):</label>
-    <input type="text" name="tickers" id="tickers" placeholder="Inserisci i ticker separati da virgola" required>
+    <label for="tickers">Tickers (e.g., AAPL, MSFT, GOOGL):</label>
+    <input type="text" name="tickers" id="tickers" placeholder="Enter tickers separated by comma" required>
 
-    <label for="start_date">Data Inizio:</label>
+    <label for="start_date">Start Date:</label>
     <input type="date" name="start_date" id="start_date" required>
 
-    <label for="end_date">Data Fine:</label>
+    <label for="end_date">End Date:</label>
     <input type="date" name="end_date" id="end_date" required>
 
-    <label for="risk_free_choice">Tasso risk-free:</label>
+    <label for="risk_free_choice">Risk-free rate:</label>
     <select name="risk_free_choice" id="risk_free_choice" required>
         <option value="0">0%</option>
         <option value="irx">IRX (3-Month Treasury Bill)</option>
-        <option value="custom">Personalizzato</option>
+        <option value="custom">Custom</option>
     </select>
 
     <div id="custom_rate_container" style="display:none; margin-top: 10px;">
-        <label for="custom_risk_free">Inserisci tasso personalizzato (es. 0.01 per 1%):</label>
+        <label for="custom_risk_free">Enter custom rate (e.g., 0.01 for 1%):</label>
         <input type="text" name="custom_risk_free" id="custom_risk_free">
     </div>
 
     <div class="checkbox-container">
         <input type="checkbox" name="short_selling" id="short_selling">
-        <label for="short_selling">Permetti vendita allo scoperto (short selling)</label>
+        <label for="short_selling">Allow short selling</label>
     </div>
 
-    <button type="submit">CALCOLA</button>
+    <button type="submit">CALCULATE</button>
 </form>
 
 <script>
@@ -95,19 +95,19 @@
 
 {% if gmvp_weights %}
 
-<p><strong>Risk-free rate utilizzato:</strong> {{ risk_free_rate }} <span>%</span></p>
+<p><strong>Risk-free rate used:</strong> {{ risk_free_rate }} <span>%</span></p>
 
 <div class="section">
     <h2>GMVP (Global Minimum Variance Portfolio)</h2>
-    <p><strong>Rendimento atteso:</strong> {{ gmvp_return }} <span>%</span> </p>
-    <p><strong>Varianza:</strong> {{ gmvp_variance }}</p>
-    <p><strong>Deviazione standard:</strong> {{ gmvp_std }} <span>%</span> </p>
-    <p><strong>Sharpe ratio:</strong> {{ gmvp_sharpe }}</p>
+    <p><strong>Expected Return:</strong> {{ gmvp_return }} <span>%</span> </p>
+    <p><strong>Variance:</strong> {{ gmvp_variance }}</p>
+    <p><strong>Standard Deviation:</strong> {{ gmvp_std }} <span>%</span> </p>
+    <p><strong>Sharpe Ratio:</strong> {{ gmvp_sharpe }}</p>
 
     <table>
         <tr>
-            <th>Titolo</th>
-            <th>Peso (%)</th>
+            <th>Stock</th>
+            <th>Weight (%)</th>
         </tr>
         {% for ticker, peso in gmvp_weights.items %}
         <tr>
@@ -120,15 +120,15 @@
 
 <div class="section">
     <h2>TP (Tangency Portfolio)</h2>
-    <p><strong>Rendimento atteso:</strong> {{ tp_return }} <span>%</span> </p>
-    <p><strong>Varianza:</strong> {{ tp_variance }}</p>
-    <p><strong>Deviazione standard:</strong> {{ tp_std }} <span>%</span> </p>
-    <p><strong>Sharpe ratio:</strong> {{ tp_sharpe }}</p>
+    <p><strong>Expected Return:</strong> {{ tp_return }} <span>%</span> </p>
+    <p><strong>Variance:</strong> {{ tp_variance }}</p>
+    <p><strong>Standard Deviation:</strong> {{ tp_std }} <span>%</span> </p>
+    <p><strong>Sharpe Ratio:</strong> {{ tp_sharpe }}</p>
 
     <table>
         <tr>
-            <th>Titolo</th>
-            <th>Peso (%)</th>
+            <th>Stock</th>
+            <th>Weight (%)</th>
         </tr>
         {% for ticker, peso in tp_weights.items %}
         <tr>
@@ -140,17 +140,17 @@
 </div>
 
 <div class="section">
-    <h2>Frontiera Efficiente</h2>
+    <h2>Efficient Frontier</h2>
     <div id="grafico" style="width:100%; max-width:800px; height:500px; margin: auto;"></div>
 </div>
 
 <div class="section">
-    <h2>Matrice di Covarianza</h2>
+    <h2>Covariance Matrix</h2>
     {{ cov_matrix_html|safe }}
 </div>
 
 <div class="section">
-    <h2>Ritorni attesi</h2>
+    <h2>Expected Returns</h2>
     {{ returns_html|safe }}
 </div>
 
