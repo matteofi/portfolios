@@ -214,7 +214,7 @@ def portfolio_view(request):
 
         frontier_data = efficient_frontier(cov_matrix, expected_returns, risk_free_rate=risk_free_rate)
 
-        gmvp_sharpe = gmvp_exp / gmvp_std
+        gmvp_sharpe = (gmvp_exp - risk_free_rate) / gmvp_std
         tp_sharpe = (tp_exp - risk_free_rate) / tp_std
 
         gmvp_cumulative = (1 + (log_returns @ gmvp_weights)).cumprod()
