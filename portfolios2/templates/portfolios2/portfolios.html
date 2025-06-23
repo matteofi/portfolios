@@ -1,0 +1,165 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Efficient Portfolio</title>
+    <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        h1 { color: #333; }
+        .section { margin-bottom: 30px; }
+        table { border-collapse: collapse; margin-top: 10px; width: 100%; }
+        td, th { padding: 6px 10px; border: 1px solid #ddd; text-align: center; }
+        th { background-color: #f2f2f2; }
+        form { margin-bottom: 40px; padding: 20px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }
+        input[type="text"], input[type="date"] {
+            padding: 8px;
+            margin: 5px 0 15px 0;
+            width: 100%;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .checkbox-container {
+            margin: 15px 0;
+        }
+        .error { color: red; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+
+<body>
+
+<h1>Efficient Portfolio</h1>
+<h5>Verify tickers <a href="https://finance.yahoo.com/" target="_blank">here</a> before proceeding</h5>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <label for="tickers">Tickers (e.g., AAPL, MSFT, GOOGL):</label>
+    <input type="text" name="tickers" id="tickers" placeholder="Enter tickers separated by comma" required>
+
+    <label for="start_date">Start Date:</label>
+    <input type="date" name="start_date" id="start_date" required>
+
+    <label for="end_date">End Date:</label>
+    <input type="date" name="end_date" id="end_date" required>
+
+    <label for="risk_free_choice">Risk-free rate:</label>
+    <select name="risk_free_choice" id="risk_free_choice" required>
+        <option value="0">0%</option>
+        <option value="bil">BIL (Bloomberg 1-3 Month T-Bill)</option>
+        <option value="custom">Custom</option>
+    </select>
+
+    <div id="custom_rate_container" style="display:none; margin-top: 10px;">
+        <label for="custom_risk_free">Enter custom rate (e.g., 0.01 for 1%):</label>
+        <input type="text" name="custom_risk_free" id="custom_risk_free">
+    </div>
+
+    <div class="checkbox-container">
+        <input type="checkbox" name="short_selling" id="short_selling">
+        <label for="short_selling">Allow short selling</label>
+    </div>
+
+    <button type="submit">CALCULATE</button>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selector = document.getElementById('risk_free_choice');
+        const customInput = document.getElementById('custom_rate_container');
+
+        selector.addEventListener('change', function() {
+            customInput.style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+    });
+</script>
+
+{% if error %}
+    <div class="error">{{ error }}</div>
+{% endif %}
+
+{% if gmvp_weights %}
+
+<p><strong>Risk-free rate used:</strong> {{ risk_free_rate }} <span>%</span></p>
+
+<div class="section">
+    <h2>GMVP (Global Minimum Variance Portfolio)</h2>
+    <p><strong>Expected Return:</strong> {{ gmvp_return }} <span>%</span> </p>
+    <p><strong>Variance:</strong> {{ gmvp_variance }}</p>
+    <p><strong>Standard Deviation:</strong> {{ gmvp_std }} <span>%</span> </p>
+    <p><strong>Sharpe Ratio:</strong> {{ gmvp_sharpe }}</p>
+
+    <table>
+        <tr>
+            <th>Stock</th>
+            <th>Weight (%)</th>
+        </tr>
+        {% for ticker, peso in gmvp_weights.items %}
+        <tr>
+            <td>{{ ticker }}</td>
+            <td>{{ peso|floatformat:3 }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div class="section">
+    <h2>TP (Tangency Portfolio)</h2>
+    <p><strong>Expected Return:</strong> {{ tp_return }} <span>%</span> </p>
+    <p><strong>Variance:</strong> {{ tp_variance }}</p>
+    <p><strong>Standard Deviation:</strong> {{ tp_std }} <span>%</span> </p>
+    <p><strong>Sharpe Ratio:</strong> {{ tp_sharpe }}</p>
+
+    <table>
+        <tr>
+            <th>Stock</th>
+            <th>Weight (%)</th>
+        </tr>
+        {% for ticker, peso in tp_weights.items %}
+        <tr>
+            <td>{{ ticker }}</td>
+            <td>{{ peso|floatformat:3 }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div class="section">
+    <h2>Efficient Frontier</h2>
+    <div id="grafico" style="width:100%; max-width:800px; height:500px; margin: auto;"></div>
+</div>
+
+<div class="section">
+    <h2>Covariance Matrix</h2>
+    {{ cov_matrix_html|safe }}
+</div>
+
+<div class="section">
+    <h2>Expected Returns</h2>
+    {{ returns_html|safe }}
+</div>
+
+{{ frontier_data|json_script:"frontier-data" }}
+{{ gmvp_point|json_script:"gmvp-point" }}
+{{ tp_point|json_script:"tp-point" }}
+<script src="{% static 'portfolios2/frontierChart.js' %}"></script>
+
+{% endif %}
+
+</body>
+</html>

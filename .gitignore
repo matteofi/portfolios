@@ -1,0 +1,21 @@
+# File di ambiente
+.env
+*.env
+
+# Database SQLite
+db.sqlite3
+
+# Cartelle e file di Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Django
+staticfiles/
+
+# IDE
+.idea/
+.vscode/
+
+# Altro
+.DS_Store
