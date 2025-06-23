@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
         y: rendimenti,
         mode: 'markers',
         type: 'scatter',
-        name: 'Frontiera Efficiente',
+        name: 'Efficient Frontier',
         marker: {
             size: 6,
             color: sharpe,
